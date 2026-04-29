@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Single Scroll Banner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow-x:hidden;background:#111}
+.section{position:relative;height:200vh;width:100%;overflow:hidden}
+.banner{position:sticky;top:0;height:100vh;width:100%;background-size:cover;background-position:center;transform:translateY(0);transition:transform .15s linear}
+#img1{background-image:url('img1.jpeg');}
+#img2{background-image:url('img2.jpeg');}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:3;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:bold;text-shadow:0 2px 8px #000}
+.content{padding:80px 20px;max-width:900px;margin:auto;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="section">
+  <div class="banner" id="img2"></div>
+  <div class="banner" id="img1"></div>
+
+</div>
+<!-- <script>
+const img1=document.getElementById('img1');
+window.addEventListener('scroll',()=>{
+ const y=window.scrollY;
+ const move=Math.max(0,y-300);
+ img1.style.transform=`translateY(${-move}px)`;
+});
+</script> -->
+</body>
+</html>
