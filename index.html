@@ -1,57 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multiple Scroll Banner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Touch Distortion</title>
 
-<style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-body{
-    overflow-x:hidden;
-    background:#111;
-}
+        body {
+            background: #000;
+            overflow-x: hidden;
+        }
 
-/* section height auto by number of images */
-.section{
-    position:relative;
-}
+        .section {
+            position: relative;
+        }
 
-/* common banner style */
-.banner{
-    position:sticky;
-    top:0;
-    width:100%;
-    height:100vh;
-    background-size:cover;
-    background-position:center;
-}
-</style>
+        .banner {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="section">
+    <div class="section">
+        <div class="banner" data-img="im1.jpeg"></div>
+        <div class="banner" data-img="im2.jpeg"></div>
+        <div class="banner" data-img="img1.jpeg"></div>
+    </div>
 
-    <!-- add unlimited banners -->
-    <div class="banner" style="background-image:url('im1.jpeg')"></div>
-    <div class="banner" style="background-image:url('im2.jpeg')"></div>
-    <div class="banner" style="background-image:url('img1.jpeg')"></div>
+    <script>
+        const banners = document.querySelectorAll( ".banner" );
+        const section = document.querySelector( ".section" );
 
-</div>
+        section.style.height = banners.length * 100 + "vh";
 
-<script>
-const banners = document.querySelectorAll(".banner");
-const section = document.querySelector(".section");
+        banners.forEach( banner => {
 
-/* auto section height */
-section.style.height = banners.length * 100 + "vh";
-</script>
+            const canvas = document.createElement( "canvas" );
+            const ctx = canvas.getContext( "2d" );
+            banner.appendChild( canvas );
+
+            const img = new Image();
+            img.src = banner.dataset.img;
+
+            let distortions = [];
+            let isDown = false;
+            let lastX = 0, lastY = 0;
+
+            function resize() {
+                canvas.width = banner.offsetWidth;
+                canvas.height = banner.offsetHeight;
+            }
+
+            resize();
+            window.addEventListener( "resize", resize );
+
+            img.onload = () => animate();
+
+            // 🔥 controlled distortion (smooth trail)
+            function addDistortion( x, y ) {
+                const dx = x - lastX;
+                const dy = y - lastY;
+
+                if ( Math.sqrt( dx * dx + dy * dy ) > 12 ) {
+                    distortions.push( {
+                        x,
+                        y,
+                        radius: 0,
+                        maxRadius: 90
+                    } );
+
+                    lastX = x;
+                    lastY = y;
+                }
+            }
+
+            // =====================
+            // MOUSE EVENTS
+            // =====================
+            banner.addEventListener( "mousedown", ( e ) => {
+                isDown = true;
+                const rect = banner.getBoundingClientRect();
+                addDistortion( e.clientX - rect.left, e.clientY - rect.top );
+            } );
+
+            banner.addEventListener( "mousemove", ( e ) => {
+                if ( !isDown ) return;
+                const rect = banner.getBoundingClientRect();
+                addDistortion( e.clientX - rect.left, e.clientY - rect.top );
+            } );
+
+            window.addEventListener( "mouseup", () => isDown = false );
+
+            // =====================
+            // TOUCH EVENTS
+            // =====================
+            banner.addEventListener( "touchstart", ( e ) => {
+                const rect = banner.getBoundingClientRect();
+                const t = e.touches[0];
+                isDown = true;
+                addDistortion( t.clientX - rect.left, t.clientY - rect.top );
+            } );
+
+            banner.addEventListener( "touchmove", ( e ) => {
+                if ( !isDown ) return;
+                const rect = banner.getBoundingClientRect();
+                const t = e.touches[0];
+                addDistortion( t.clientX - rect.left, t.clientY - rect.top );
+            } );
+
+            banner.addEventListener( "touchend", () => isDown = false );
+
+            // =====================
+            // DRAW IMAGE
+            // =====================
+            function drawBase() {
+                ctx.drawImage( img, 0, 0, canvas.width, canvas.height );
+            }
+
+            // =====================
+            // BULGE DISTORTION
+            // =====================
+            function bulgeEffect( d ) {
+                const { x, y, radius } = d;
+
+                const size = radius * 2;
+                if ( size < 2 ) return;
+
+                let imgData = ctx.getImageData( x - radius, y - radius, size, size );
+                let data = imgData.data;
+                let copy = new Uint8ClampedArray( data );
+
+                for ( let i = 0; i < size; i++ ) {
+                    for ( let j = 0; j < size; j++ ) {
+
+                        let dx = i - radius;
+                        let dy = j - radius;
+                        let dist = Math.sqrt( dx * dx + dy * dy );
+
+                        if ( dist < radius ) {
+
+                            let r = dist / radius;
+                            let theta = Math.atan2( dy, dx );
+
+                            // 🔥 smooth bulge curve
+                            let newR = Math.pow( r, 0.6 ) * radius;
+
+                            let srcX = Math.floor( radius + newR * Math.cos( theta ) );
+                            let srcY = Math.floor( radius + newR * Math.sin( theta ) );
+
+                            let dstIndex = ( i + j * size ) * 4;
+                            let srcIndex = ( srcX + srcY * size ) * 4;
+
+                            data[dstIndex] = copy[srcIndex];
+                            data[dstIndex + 1] = copy[srcIndex + 1];
+                            data[dstIndex + 2] = copy[srcIndex + 2];
+                            data[dstIndex + 3] = 255;
+                        }
+                    }
+                }
+
+                ctx.putImageData( imgData, x - radius, y - radius );
+            }
+
+            // =====================
+            // ANIMATION LOOP
+            // =====================
+            function animate() {
+                drawBase();
+
+                distortions.forEach( ( d, i ) => {
+                    bulgeEffect( d );
+                    d.radius += 2;
+
+                    if ( d.radius > d.maxRadius ) {
+                        distortions.splice( i, 1 );
+                    }
+                } );
+
+                requestAnimationFrame( animate );
+            }
+
+        } );
+    </script>
 
 </body>
+
 </html>
