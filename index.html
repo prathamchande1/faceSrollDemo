@@ -60,7 +60,7 @@
         // IMAGE ELEMENT
         // -----------------------------
         const img = document.createElement( 'img' );
-        img.src = images[0];
+        img.src = images[0]; // ✅ default image
 
         Object.assign( img.style, {
             width: "100%",
@@ -103,29 +103,43 @@
         }
 
         // -----------------------------
-        // DRAG STATE
+        // STATE
         // -----------------------------
         let isDown = false;
+        let lastZone = -1;
 
         // -----------------------------
         // UPDATE IMAGE
         // -----------------------------
         function updateImage( x, y ) {
             const zone = getZone( x, y );
-            if ( zone !== -1 ) {
+
+            // only update when zone actually changes (smooth + avoids flicker)
+            if ( zone !== -1 && zone !== lastZone ) {
+                lastZone = zone;
                 img.src = images[zone];
             }
         }
 
         // -----------------------------
+        // RESET TO DEFAULT
+        // -----------------------------
+        function resetImage() {
+            lastZone = -1;
+            img.src = images[0]; // ✅ back to default
+        }
+
+        // -----------------------------
         // MOUSE EVENTS
         // -----------------------------
-        banner.addEventListener( 'mousedown', () => {
+        banner.addEventListener( 'mousedown', ( e ) => {
             isDown = true;
+            updateImage( e.clientX, e.clientY ); // instant response
         } );
 
         window.addEventListener( 'mouseup', () => {
             isDown = false;
+            resetImage(); // ✅ reset on release
         } );
 
         window.addEventListener( 'mousemove', ( e ) => {
@@ -136,16 +150,20 @@
         // -----------------------------
         // TOUCH EVENTS
         // -----------------------------
-        banner.addEventListener( 'touchstart', () => {
+        banner.addEventListener( 'touchstart', ( e ) => {
             isDown = true;
+            const t = e.touches[0];
+            updateImage( t.clientX, t.clientY );
         } );
 
         window.addEventListener( 'touchend', () => {
             isDown = false;
+            resetImage(); // ✅ reset on release
         } );
 
         window.addEventListener( 'touchmove', ( e ) => {
             if ( !isDown ) return;
+
             const t = e.touches[0];
             updateImage( t.clientX, t.clientY );
         } );
