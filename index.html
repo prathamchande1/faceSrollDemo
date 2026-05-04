@@ -42,8 +42,6 @@
 
     <div class="section">
         <div class="banner" data-img="im1.jpeg"></div>
-        <!--<div class="banner" data-img="im2.jpeg"></div>
-        <div class="banner" data-img="img1.jpeg"></div>-->
     </div>
 
     <script>
@@ -65,9 +63,21 @@
             let isDown = false;
             let lastX = 0, lastY = 0;
 
+            // ✅ CHEEK MASK
+            const cheekMask = {
+                x: 0,
+                y: 0,
+                r: 0
+            };
+
             function resize() {
                 canvas.width = banner.offsetWidth;
                 canvas.height = banner.offsetHeight;
+
+                // 👉 tweak these 3 values if alignment needed
+                cheekMask.x = canvas.width * 0.65;
+                cheekMask.y = canvas.height * 0.60;
+                cheekMask.r = canvas.width * 0.22;
             }
 
             resize();
@@ -75,8 +85,19 @@
 
             img.onload = () => animate();
 
-            // 🔥 controlled distortion (smooth trail)
+            // ✅ CHECK IF POINTER IS IN CHEEK
+            function isInsideCheek( x, y ) {
+                const dx = x - cheekMask.x;
+                const dy = y - cheekMask.y;
+                return Math.sqrt( dx * dx + dy * dy ) < cheekMask.r;
+            }
+
+            // 🔥 CONTROLLED DISTORTION (ONLY CHEEK)
             function addDistortion( x, y ) {
+
+                // ❌ restrict outside cheek
+                if ( !isInsideCheek( x, y ) ) return;
+
                 const dx = x - lastX;
                 const dy = y - lastY;
 
@@ -161,7 +182,6 @@
                             let r = dist / radius;
                             let theta = Math.atan2( dy, dx );
 
-                            // 🔥 smooth bulge curve
                             let newR = Math.pow( r, 1.6 ) * radius;
 
                             let srcX = Math.floor( radius + newR * Math.cos( theta ) );
