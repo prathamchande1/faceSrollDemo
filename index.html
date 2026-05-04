@@ -41,187 +41,133 @@
 <body>
 
     <div class="section">
-        <div class="banner" data-img="im1.jpeg"></div>
+        <div class="banner"></div>
     </div>
 
     <script>
-        const banners = document.querySelectorAll( ".banner" );
-        const section = document.querySelector( ".section" );
+        const banner = document.querySelector( '.banner' );
 
-        section.style.height = banners.length * 100 + "vh";
+        // -----------------------------
+        // IMAGE LIST (27 → 37)
+        // -----------------------------
+        const images = [];
+        for ( let i = 27; i <= 37; i++ ) {
+            let num = i.toString().padStart( 3, '0' );
+            images.push( `poke_${num}.png` );
+        }
 
-        banners.forEach( banner => {
+        // -----------------------------
+        // IMAGE ELEMENT
+        // -----------------------------
+        const img = document.createElement( 'img' );
+        img.src = images[0]; // ✅ default image
 
-            const canvas = document.createElement( "canvas" );
-            const ctx = canvas.getContext( "2d" );
-            banner.appendChild( canvas );
+        Object.assign( img.style, {
+            width: "100%",
+            height: "100%",
+            objectFit: "cover"
+        } );
 
-            const img = new Image();
-            img.src = banner.dataset.img;
+        banner.appendChild( img );
 
-            let distortions = [];
-            let isDown = false;
-            let lastX = 0, lastY = 0;
+        // -----------------------------
+        // GRID (CHEEK AREA)
+        // -----------------------------
+        function getZone( x, y ) {
+            const rect = banner.getBoundingClientRect();
 
-            // ✅ CHEEK MASK
-            const cheekMask = {
-                x: 0,
-                y: 0,
-                r: 0
-            };
+            const px = x - rect.left;
+            const py = y - rect.top;
 
-            function resize() {
-                canvas.width = banner.offsetWidth;
-                canvas.height = banner.offsetHeight;
+            const w = rect.width;
+            const h = rect.height;
 
-                // 👉 tweak these 3 values if alignment needed
-                cheekMask.x = canvas.width * 0.65;
-                cheekMask.y = canvas.height * 0.60;
-                cheekMask.r = canvas.width * 0.22;
+            const startX = w * 0.52;
+            const startY = h * 0.38;
+
+            const cols = 3;
+            const rows = 4;
+
+            const zoneW = w * 0.11;
+            const zoneH = h * 0.09;
+
+            const col = Math.floor( ( px - startX ) / zoneW );
+            const row = Math.floor( ( py - startY ) / zoneH );
+
+            if ( col < 0 || col >= cols || row < 0 || row >= rows ) return -1;
+
+            const index = row * cols + col;
+            if ( index >= images.length ) return -1;
+
+            return index;
+        }
+
+        // -----------------------------
+        // STATE
+        // -----------------------------
+        let isDown = false;
+        let lastZone = -1;
+
+        // -----------------------------
+        // UPDATE IMAGE
+        // -----------------------------
+        function updateImage( x, y ) {
+            const zone = getZone( x, y );
+
+            // only update when zone actually changes (smooth + avoids flicker)
+            if ( zone !== -1 && zone !== lastZone ) {
+                lastZone = zone;
+                img.src = images[zone];
             }
+        }
 
-            resize();
-            window.addEventListener( "resize", resize );
+        // -----------------------------
+        // RESET TO DEFAULT
+        // -----------------------------
+        function resetImage() {
+            lastZone = -1;
+            img.src = images[0]; // ✅ back to default
+        }
 
-            img.onload = () => animate();
+        // -----------------------------
+        // MOUSE EVENTS
+        // -----------------------------
+        banner.addEventListener( 'mousedown', ( e ) => {
+            isDown = true;
+            updateImage( e.clientX, e.clientY ); // instant response
+        } );
 
-            // ✅ CHECK IF POINTER IS IN CHEEK
-            function isInsideCheek( x, y ) {
-                const dx = x - cheekMask.x;
-                const dy = y - cheekMask.y;
-                return Math.sqrt( dx * dx + dy * dy ) < cheekMask.r;
-            }
+        window.addEventListener( 'mouseup', () => {
+            isDown = false;
+            resetImage(); // ✅ reset on release
+        } );
 
-            // 🔥 CONTROLLED DISTORTION (ONLY CHEEK)
-            function addDistortion( x, y ) {
+        window.addEventListener( 'mousemove', ( e ) => {
+            if ( !isDown ) return;
+            updateImage( e.clientX, e.clientY );
+        } );
 
-                // ❌ restrict outside cheek
-                if ( !isInsideCheek( x, y ) ) return;
+        // -----------------------------
+        // TOUCH EVENTS
+        // -----------------------------
+        banner.addEventListener( 'touchstart', ( e ) => {
+            isDown = true;
+            const t = e.touches[0];
+            updateImage( t.clientX, t.clientY );
+        } );
 
-                const dx = x - lastX;
-                const dy = y - lastY;
+        window.addEventListener( 'touchend', () => {
+            isDown = false;
+            resetImage(); // ✅ reset on release
+        } );
 
-                if ( Math.sqrt( dx * dx + dy * dy ) > 12 ) {
-                    distortions.push( {
-                        x,
-                        y,
-                        radius: 0,
-                        maxRadius: 60
-                    } );
+        window.addEventListener( 'touchmove', ( e ) => {
+            if ( !isDown ) return;
 
-                    lastX = x;
-                    lastY = y;
-                }
-            }
-
-            // =====================
-            // MOUSE EVENTS
-            // =====================
-            banner.addEventListener( "mousedown", ( e ) => {
-                isDown = true;
-                const rect = banner.getBoundingClientRect();
-                addDistortion( e.clientX - rect.left, e.clientY - rect.top );
-            } );
-
-            banner.addEventListener( "mousemove", ( e ) => {
-                if ( !isDown ) return;
-                const rect = banner.getBoundingClientRect();
-                addDistortion( e.clientX - rect.left, e.clientY - rect.top );
-            } );
-
-            window.addEventListener( "mouseup", () => isDown = false );
-
-            // =====================
-            // TOUCH EVENTS
-            // =====================
-            banner.addEventListener( "touchstart", ( e ) => {
-                const rect = banner.getBoundingClientRect();
-                const t = e.touches[0];
-                isDown = true;
-                addDistortion( t.clientX - rect.left, t.clientY - rect.top );
-            } );
-
-            banner.addEventListener( "touchmove", ( e ) => {
-                if ( !isDown ) return;
-                const rect = banner.getBoundingClientRect();
-                const t = e.touches[0];
-                addDistortion( t.clientX - rect.left, t.clientY - rect.top );
-            } );
-
-            banner.addEventListener( "touchend", () => isDown = false );
-
-            // =====================
-            // DRAW IMAGE
-            // =====================
-            function drawBase() {
-                ctx.drawImage( img, 0, 0, canvas.width, canvas.height );
-            }
-
-            // =====================
-            // BULGE DISTORTION
-            // =====================
-            function bulgeEffect( d ) {
-                const { x, y, radius } = d;
-
-                const size = radius * 2;
-                if ( size < 2 ) return;
-
-                let imgData = ctx.getImageData( x - radius, y - radius, size, size );
-                let data = imgData.data;
-                let copy = new Uint8ClampedArray( data );
-
-                for ( let i = 0; i < size; i++ ) {
-                    for ( let j = 0; j < size; j++ ) {
-
-                        let dx = i - radius;
-                        let dy = j - radius;
-                        let dist = Math.sqrt( dx * dx + dy * dy );
-
-                        if ( dist < radius ) {
-
-                            let r = dist / radius;
-                            let theta = Math.atan2( dy, dx );
-
-                            let newR = Math.pow( r, 1.6 ) * radius;
-
-                            let srcX = Math.floor( radius + newR * Math.cos( theta ) );
-                            let srcY = Math.floor( radius + newR * Math.sin( theta ) );
-
-                            let dstIndex = ( i + j * size ) * 4;
-                            let srcIndex = ( srcX + srcY * size ) * 4;
-
-                            data[dstIndex] = copy[srcIndex];
-                            data[dstIndex + 1] = copy[srcIndex + 1];
-                            data[dstIndex + 2] = copy[srcIndex + 2];
-                            data[dstIndex + 3] = 255;
-                        }
-                    }
-                }
-
-                ctx.putImageData( imgData, x - radius, y - radius );
-            }
-
-            // =====================
-            // ANIMATION LOOP
-            // =====================
-            function animate() {
-                drawBase();
-
-                distortions.forEach( ( d, i ) => {
-                    bulgeEffect( d );
-                    d.radius += 2;
-
-                    if ( d.radius > d.maxRadius ) {
-                        distortions.splice( i, 1 );
-                    }
-                } );
-
-                requestAnimationFrame( animate );
-            }
-
+            const t = e.touches[0];
+            updateImage( t.clientX, t.clientY );
         } );
     </script>
-
 </body>
 
 </html>
