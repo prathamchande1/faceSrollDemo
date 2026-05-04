@@ -42,8 +42,8 @@
 
     <div class="section">
         <div class="banner" data-img="im1.jpeg"></div>
-        <div class="banner" data-img="im2.jpeg"></div>
-        <div class="banner" data-img="img1.jpeg"></div>
+        <!--<div class="banner" data-img="im2.jpeg"></div>
+        <div class="banner" data-img="img1.jpeg"></div>-->
     </div>
 
     <script>
@@ -85,7 +85,7 @@
                         x,
                         y,
                         radius: 0,
-                        maxRadius: 90
+                        maxRadius: 60
                     } );
 
                     lastX = x;
@@ -162,7 +162,7 @@
                             let theta = Math.atan2( dy, dx );
 
                             // 🔥 smooth bulge curve
-                            let newR = Math.pow( r, 0.6 ) * radius;
+                            let newR = Math.pow( r, 1.6 ) * radius;
 
                             let srcX = Math.floor( radius + newR * Math.cos( theta ) );
                             let srcY = Math.floor( radius + newR * Math.sin( theta ) );
